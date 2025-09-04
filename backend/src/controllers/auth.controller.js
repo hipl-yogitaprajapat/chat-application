@@ -70,7 +70,7 @@ export const login = async (req, res) => {
         const jwtToken = generateToken(user._id, res);
 
         res.status(200).json({
-            // _id: user._id,
+            _id: user._id,
             // firstName: user.firstName,
             // lastName: user.lastName,
             // company: user.company,

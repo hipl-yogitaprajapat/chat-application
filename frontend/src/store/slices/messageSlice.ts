@@ -10,6 +10,7 @@ const initialState: MessageState = {
   text: '',
   message:"",
   success: false,
+  selectedUser: null,
 };
 
 const updatedInitialState: MessageState = {
@@ -35,6 +36,9 @@ const chatSlice = createSlice({
       state.error = null;
       state.message = '';
     },
+    setSelectedUser: (state, action) => {
+      state.selectedUser = action.payload;
+    },
     },
     extraReducers:(builder)=>{
         builder.addCase(chatSidebarThunk.pending,(state)=>{
@@ -57,5 +61,5 @@ const chatSlice = createSlice({
     }
 })
 
-export const {clearMessages}= chatSlice.actions;
+export const {clearMessages,setSelectedUser}= chatSlice.actions;
 export default chatSlice.reducer;

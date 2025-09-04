@@ -1,7 +1,7 @@
 "use client";
 
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { chatSidebarThunk } from "@/store/slices/messageSlice";
+import { chatSidebarThunk, setSelectedUser } from "@/store/slices/messageSlice";
 import { useEffect } from "react";
 
 const Sidebar = () => {
@@ -41,6 +41,7 @@ const Sidebar = () => {
       <div
         key={user._id}
         className="p-3 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+        onClick={() => dispatch(setSelectedUser(user))}
       >
         <img
           src={`https://ui-avatars.com/api/?name=${user.firstName}+${user.lastName}`}
