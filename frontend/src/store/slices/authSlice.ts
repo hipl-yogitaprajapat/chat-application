@@ -87,11 +87,15 @@ const authSlice = createSlice({
             state.isLoading = true,
             state.error=null
         })
-         builder.addCase(loginUserThunk.fulfilled, (state, action) => {     
+         builder.addCase(loginUserThunk.fulfilled, (state, action) => { 
             state.isLoading = false;
             state.success = true;
             state.user = action.payload;
             state.message = action.payload.message;
+            localStorage.setItem("userId",action?.payload?._id)
+            const fullName = `${action?.payload?.firstName || ""} ${action?.payload?.lastName || ""}`.trim();
+            localStorage.setItem("name",fullName)
+            localStorage.setItem("company",action?.payload?.company)
         })
         builder.addCase(loginUserThunk.rejected, (state, action) => {
             state.isLoading = true

@@ -13,6 +13,10 @@ interface AuthResponse {
     errors?: any;
     data: any;
     email: any;
+    _id:any;
+    firstName:string,
+    lastName:string,
+    company:any
 }
 
 interface RegisterFormData {

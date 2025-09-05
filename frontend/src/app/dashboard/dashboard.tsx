@@ -1,29 +1,67 @@
-"use client"
-import { useState } from "react";
+"use client";
+import { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
-import { useAppSelector } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { connectSocket, getSocket, disconnectSocket } from "../../lib/socket";
+import { addMessage, fetchChatHistoryThunk, sendMessageThunk } from "@/store/slices/messageSlice";
 
 const Dashboard = () => {
-  const { selectedUser } = useAppSelector((state) => state.messages); 
-  console.log(selectedUser,"selectedUser");
-  
+  const dispatch = useAppDispatch();
+  const { selectedUser,messages  } = useAppSelector((state) => state.messages);
   const [message, setMessage] = useState("");
+  
 
-  const handleSend = () => {
-    if (!message.trim()) return;
-    // dispatch(sendMessageThunk({ receiverId: selectedUser._id, text: message }));
-    setMessage("");
+  useEffect(() => {
+    const userId = localStorage.getItem("userId");
+    console.log(userId,"userId");
+    
+    if (userId) {
+      connectSocket(userId);
+    }
+
+    const socket = getSocket();
+    if (!socket) return;
+
+    socket.on("newMessage", (msg) => {
+      console.log(msg,"msg");
+      dispatch(addMessage(msg));
+    });
+
+    return () => {
+      socket?.off("newMessage");
+      disconnectSocket();
+    };
+  }, []);
+
+useEffect(() => {
+  if (selectedUser) {
+    dispatch(fetchChatHistoryThunk(selectedUser._id));
+  }
+}, [selectedUser, dispatch]);
+
+const handleSend = () => {
+  if (!message.trim() || !selectedUser) return;
+
+  const newMsg = {
+    text: message,
+    senderId: localStorage.getItem("userId"),
+    receiverId: selectedUser._id,
+    createdAt: new Date().toISOString(),
   };
+
+  dispatch(addMessage(newMsg));
+
+  dispatch(sendMessageThunk({ receiverId: selectedUser._id, text: message }));
+
+  setMessage("");
+};
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
       <Sidebar />
 
-      {/* Chat Area */}
       <div className="flex flex-col flex-1">
         {!selectedUser ? (
-          // ✅ Show welcome if no user is selected
           <div className="flex flex-col items-center justify-center h-full text-center">
             <h2 className="text-2xl font-bold">Welcome to Chatty!</h2>
             <p className="text-base-content/60">
@@ -49,12 +87,20 @@ const Dashboard = () => {
 
             {/* Messages */}
             <div className="flex-1 p-4 space-y-4 overflow-y-auto">
-              {/* Later load from API */}
-              <div className="flex">
-                <div className="bg-blue-100 p-3 rounded-lg max-w-sm">
-                  Hi 👋 this is a sample message
+              {messages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`flex ${
+                    msg.senderId === localStorage.getItem("userId")
+                      ? "justify-end"
+                      : "justify-start"
+                  }`}
+                >
+                  <div className="bg-blue-100 p-3 rounded-lg max-w-sm">
+                    {msg.text}
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
 
             {/* Input */}
@@ -65,8 +111,6 @@ const Dashboard = () => {
                 placeholder="Write Something..."
                 className="flex-1 p-2 rounded-full border bg-gray-50"
               />
-              <button className="p-2">😊</button>
-              <button className="p-2">📎</button>
               <button
                 onClick={handleSend}
                 className="p-2 bg-blue-500 text-white rounded-full px-4"

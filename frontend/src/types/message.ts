@@ -4,8 +4,16 @@ interface MessageState{
   error: any,
   text: string,
   success: boolean,
-  message:any
+  message:any,
+  messages: Message[];
+  onlineUsers: string[];
   selectedUser: User | null,
+}
+interface Message {
+  _id?: string;
+  senderId: string;
+  receiverId: string;
+  text: string;
 }
 
  interface User {

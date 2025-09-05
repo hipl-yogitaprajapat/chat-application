@@ -71,14 +71,14 @@ export const login = async (req, res) => {
 
         res.status(200).json({
             _id: user._id,
-            // firstName: user.firstName,
-            // lastName: user.lastName,
-            // company: user.company,
-            // email: user.email
+            firstName: user.firstName,
+            lastName: user.lastName,
+            company: user.company,
+            // email: user.email,
             message: "Login successfully",
             success: true,
             jwtToken,
-            name: user.firstName,
+            // name: user.firstName ,
         })
 
     } catch (error) {
