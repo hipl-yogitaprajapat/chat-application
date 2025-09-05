@@ -14,6 +14,7 @@ interface Message {
   senderId: string;
   receiverId: string;
   text: string;
+  createdAt?: string;
 }
 
  interface User {

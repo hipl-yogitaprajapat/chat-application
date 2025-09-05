@@ -33,7 +33,11 @@ io.on("connection", (socket) => {
     console.log(`${senderId} is typing for ${receiverId}: ${isTyping}`);
     
     // Emit only to the specific receiver
-    socket.to(receiverId).emit("userTyping", { senderId, isTyping });
+    // socket.to(receiverId).emit("userTyping", { senderId, isTyping });
+     const receiverSocketId = userSocketMap[receiverId];
+  if (receiverSocketId) {
+    io.to(receiverSocketId).emit("userTyping", { senderId, isTyping });
+  }
   });
     
     socket.on("disconnect", () => {

@@ -81,8 +81,6 @@ const chatSlice = createSlice({
 
     })
     builder.addCase(chatSidebarThunk.rejected, (state, action) => {
-      console.log(action, "action11");
-
       state.isLoading = true
       // state.error = action.payload;
     })

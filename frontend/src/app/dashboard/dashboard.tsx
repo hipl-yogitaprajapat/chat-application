@@ -1,20 +1,21 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { connectSocket, getSocket, disconnectSocket } from "../../lib/socket";
-import { addMessage, fetchChatHistoryThunk, sendMessageThunk } from "@/store/slices/messageSlice";
+import { addMessage, fetchChatHistoryThunk, sendMessageThunk, setOnlineUsers } from "@/store/slices/messageSlice";
 
 const Dashboard = () => {
   const dispatch = useAppDispatch();
-  const { selectedUser,messages  } = useAppSelector((state) => state.messages);
-  const [message, setMessage] = useState("");
+  const { selectedUser, messages, onlineUsers } = useAppSelector((state) => state.messages);
   
+  const [message, setMessage] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+
+  const typingTimeout = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const userId = localStorage.getItem("userId");
-    console.log(userId,"userId");
-    
     if (userId) {
       connectSocket(userId);
     }
@@ -23,38 +24,81 @@ const Dashboard = () => {
     if (!socket) return;
 
     socket.on("newMessage", (msg) => {
-      console.log(msg,"msg");
       dispatch(addMessage(msg));
+    });
+
+    socket.on("getOnlineUsers", (users) => {
+      dispatch(setOnlineUsers(users));
+    });
+
+    // listen for typing
+    socket.on("userTyping", ({ senderId, isTyping }) => {
+      if (selectedUser && senderId === selectedUser._id) {
+        setIsTyping(isTyping);
+      }
     });
 
     return () => {
       socket?.off("newMessage");
+      socket?.off("getOnlineUsers");
+      socket?.off("userTyping");
       disconnectSocket();
     };
-  }, []);
+  }, [dispatch, selectedUser]);
 
-useEffect(() => {
-  if (selectedUser) {
-    dispatch(fetchChatHistoryThunk(selectedUser._id));
-  }
-}, [selectedUser, dispatch]);
+  useEffect(() => {
+    if (selectedUser) {
+      dispatch(fetchChatHistoryThunk(selectedUser._id));
+    }
+  }, [selectedUser, dispatch]);
 
-const handleSend = () => {
-  if (!message.trim() || !selectedUser) return;
+  const handleSend = () => {
+    if (!message.trim() || !selectedUser) return;
 
-  const newMsg = {
-    text: message,
-    senderId: localStorage.getItem("userId"),
-    receiverId: selectedUser._id,
-    createdAt: new Date().toISOString(),
+    const newMsg = {
+      text: message,
+      senderId: localStorage.getItem("userId"),
+      receiverId: selectedUser._id,
+      createdAt: new Date().toISOString(),
+    };
+
+    dispatch(addMessage(newMsg));
+    dispatch(sendMessageThunk({ receiverId: selectedUser._id, text: message }));
+
+    setMessage("");
+    // stop typing immediately after send
+    const socket = getSocket();
+    if (socket && selectedUser) {
+      socket.emit("userTyping", {
+        senderId: localStorage.getItem("userId"),
+        receiverId: selectedUser._id,
+        isTyping: false,
+      });
+    }
   };
 
-  dispatch(addMessage(newMsg));
+  const handleTyping = (val: string) => {
+    setMessage(val);
 
-  dispatch(sendMessageThunk({ receiverId: selectedUser._id, text: message }));
+    const socket = getSocket();
+    if (socket && selectedUser) {
+      socket.emit("userTyping", {
+        senderId: localStorage.getItem("userId"),
+        receiverId: selectedUser._id,
+        isTyping: true,
+      });
 
-  setMessage("");
-};
+      if (typingTimeout.current) clearTimeout(typingTimeout.current);
+
+      typingTimeout.current = setTimeout(() => {
+        socket.emit("userTyping", {
+          senderId: localStorage.getItem("userId"),
+          receiverId: selectedUser._id,
+          isTyping: false,
+        });
+      }, 2000);
+    }
+  };
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -81,33 +125,53 @@ const handleSend = () => {
                 <h2 className="font-semibold">
                   {selectedUser.firstName} {selectedUser.lastName}
                 </h2>
-                <p className="text-xs text-green-500">● Online</p>
+                <p className="text-xs">
+                  {isTyping ? (
+                    <span className="italic text-gray-500">Typing...</span>
+                  ) : onlineUsers.includes(selectedUser._id) ? (
+                    <span className="text-green-500">● Online</span>
+                  ) : (
+                    <span className="text-gray-400">● Offline</span>
+                  )}
+                </p>
               </div>
             </div>
 
             {/* Messages */}
             <div className="flex-1 p-4 space-y-4 overflow-y-auto">
-              {messages.map((msg, i) => (
-                <div
-                  key={i}
-                  className={`flex ${
-                    msg.senderId === localStorage.getItem("userId")
-                      ? "justify-end"
-                      : "justify-start"
-                  }`}
-                >
-                  <div className="bg-blue-100 p-3 rounded-lg max-w-sm">
-                    {msg.text}
+              {messages.map((msg, i) => {
+                // Convert createdAt into a readable local time
+                const time = msg.createdAt
+                  ? new Date(msg.createdAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                  : "";
+
+                return (
+                  <div
+                    key={i}
+                    className={`flex ${msg.senderId === localStorage.getItem("userId")
+                        ? "justify-end"
+                        : "justify-start"
+                      }`}
+                  >
+                    <div className="bg-blue-100 p-3 rounded-lg max-w-sm">
+                      <p>{msg.text}</p>
+                      <span className="text-xs text-gray-500 block mt-1 text-right">
+                        {time}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Input */}
             <div className="p-4 border-t flex items-center gap-2">
               <input
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={(e) => handleTyping(e.target.value)}
                 placeholder="Write Something..."
                 className="flex-1 p-2 rounded-full border bg-gray-50"
               />
