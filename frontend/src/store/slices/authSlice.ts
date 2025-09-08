@@ -1,6 +1,6 @@
 "use client";
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { googlelogin, loginUser, registerAction } from "../action/authAction";
+import { googlelogin, loginUser, logout, registerAction } from "../action/authAction";
 import { setCookies } from "@/utils/commons";
 
 const initialState: AuthState = {
@@ -42,6 +42,19 @@ any,
     
      if (!response.success) return rejectWithValue(response);
   return response;
+})
+
+export const LogoutUser = createAsyncThunk<
+AuthResponse,
+void,
+{rejectValue:AuthResponse}
+>("auth/logout-user",async(_,{rejectWithValue})=>{
+      try {
+    const response = await logout();
+       return response    
+  } catch (error) {
+    console.log(error);
+  }
 })
 
 export const googleAuth = createAsyncThunk<
@@ -100,6 +113,26 @@ const authSlice = createSlice({
         builder.addCase(loginUserThunk.rejected, (state, action) => {
             state.isLoading = true
             state.error = action.payload;
+        })
+         builder.addCase(LogoutUser.pending, (state) => {
+            state.isLoading = true;
+            state.error = null;
+        })
+        builder.addCase(LogoutUser.fulfilled, (state, action) => {
+          console.log(action,"actioniiiii");
+          
+            state.isLoading = false;
+            state.success = true;
+            state.message = action.payload.message;
+            state.user = action.payload;
+            localStorage.removeItem("name")
+            localStorage.removeItem("company")
+            localStorage.removeItem("userId")
+        })
+        builder.addCase(LogoutUser.rejected, (state, action) => {
+            state.isLoading = true
+            state.error = action.payload;
+
         })
          builder.addCase(googleAuth.pending, (state) => {
             state.isLoading = true;

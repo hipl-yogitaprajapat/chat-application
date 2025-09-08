@@ -21,19 +21,38 @@ export async function chatSidebar(): Promise<any> {
 }
 
 export async function sendChatMessage(receiverId: string, text: string) {
-    const res = await axiosInstance.post(
+      try {
+       const res = await axiosInstance.post(
         `${hostName}messages/send/${receiverId}`,
         { text },
         { withCredentials: true }
     );
     return res.data;
+
+    } catch (error: any) {
+        if (error.response && error.response.data) {
+            return error.response.data;
+        }
+        return { success: false, message: error.message || "Something went wrong" };
+    }
+
+  
 }
 
 
 export async function chathistory(id: string) {
+     try {
     const res = await axiosInstance.get(
         `${hostName}messages/${id}`,
         { withCredentials: true }
     );
     return res.data;
+
+    } catch (error: any) {
+        if (error.response && error.response.data) {
+            return error.response.data;
+        }
+        return { success: false, message: error.message || "Something went wrong" };
+    }
+
 }

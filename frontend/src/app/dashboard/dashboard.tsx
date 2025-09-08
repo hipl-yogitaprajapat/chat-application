@@ -77,8 +77,8 @@ const Dashboard = () => {
     }
   };
 
-  const handleTyping = (val: string) => {
-    setMessage(val);
+  const handleTyping = (e:any) => {
+    setMessage(e.target.value);
 
     const socket = getSocket();
     if (socket && selectedUser) {
@@ -99,6 +99,14 @@ const Dashboard = () => {
       }, 2000);
     }
   };
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+useEffect(() => {
+  if (messagesEndRef.current) {
+    messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+  }
+}, [messages]);
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -165,13 +173,14 @@ const Dashboard = () => {
                   </div>
                 );
               })}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Input */}
             <div className="p-4 border-t flex items-center gap-2">
               <input
                 value={message}
-                onChange={(e) => handleTyping(e.target.value)}
+                onChange={handleTyping}
                 placeholder="Write Something..."
                 className="flex-1 p-2 rounded-full border bg-gray-50"
               />
