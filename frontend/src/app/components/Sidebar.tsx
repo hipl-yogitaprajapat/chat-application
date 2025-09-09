@@ -1,14 +1,14 @@
 "use client";
 
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { LogoutUser, UpdateUserProfile, viewProfile } from "@/store/slices/authSlice";
+import { LogoutUser, removeProfile, UpdateUserProfile, viewProfile } from "@/store/slices/authSlice";
 import { chatSidebarThunk, setSelectedUser } from "@/store/slices/messageSlice";
 import { removeCookie } from "@/utils/commons";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { toast } from "react-toastify";
-import { Plus } from "lucide-react";
+import { Plus, Trash } from "lucide-react";
 
 const Sidebar = () => {
   const { data: session } = useSession();
@@ -50,6 +50,16 @@ const Sidebar = () => {
     }
   };
 
+  const handleRemoveProfile=async()=>{
+    try {
+      const result = await dispatch(removeProfile()).unwrap();
+      toast.success(result.message)
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+    
+  }
+
   const filteredUsers = useMemo(() => {
     if (!Array.isArray(users)) return [];
     if (!searchTerm) return users;
@@ -77,7 +87,7 @@ const Sidebar = () => {
   return (
     <div className="w-1/4 bg-white border-r flex flex-col">
       <div className="p-4 border-b flex items-center gap-2 relative">
-        <div className="relative">
+        <div className="relative w-16 h-16">
           <img
             src={
               profileImage
@@ -87,14 +97,25 @@ const Sidebar = () => {
                   : "https://randomuser.me/api/portraits/men/1.jpg"
             }
             alt="profile"
-            className="w-12 h-12 rounded-full object-cover"
+            className="w-full h-full rounded-full object-cover border-2 border-gray-200"
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full p-1 hover:bg-blue-600"
+            className="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full p-1 hover:bg-blue-600 transition"
+            title="Change Profile"
           >
             <Plus size={14} />
           </button>
+
+          {profileImage || profile?.image ? (
+            <button
+              onClick={handleRemoveProfile}
+              className="absolute bottom-0 left-0 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition"
+              title="Remove Profile"
+            >
+              <Trash size={14} />
+            </button>
+          ) : null}
 
           <input
             type="file"
@@ -106,7 +127,7 @@ const Sidebar = () => {
 
         <div>
           <h2 className="font-semibold">{session?.user?.name || userName}</h2>
-            {!session?.user && company && (<p className="text-sm text-gray-500">{company}</p>)}
+          {!session?.user && company && (<p className="text-sm text-gray-500">{company}</p>)}
         </div>
       </div>
    

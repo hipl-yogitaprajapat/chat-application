@@ -101,3 +101,19 @@ export async function viewProfileAction():Promise<any>{
     return { success: false, message: error.message || "Something went wrong" };
     }
 }
+
+
+export async function removeProfileAction():Promise<any>{
+    try {
+        const response = await axiosInstance.delete(`${hostName}auth/remove-profile`,{
+              withCredentials: true,
+              headers: { 'Content-Type': 'application/json' }
+        })
+        return response.data
+    } catch (error:any) { 
+    if (error.response && error.response.data) {
+      return error.response.data;
+    }
+    return { success: false, message: error.message || "Something went wrong" };
+    }
+  }

@@ -47,6 +47,7 @@ export const getUsersForSidebar = async (req, res) => {
         senderId,
         receiverId,
         text,
+        attachment: req.file ? `/uploads/${req.file.filename}` : null,
       });
   
       await newMessage.save();
