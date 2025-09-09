@@ -8,7 +8,6 @@ import { addMessage, fetchChatHistoryThunk, sendMessageThunk, setOnlineUsers } f
 const Dashboard = () => {
   const dispatch = useAppDispatch();
   const { selectedUser, messages, onlineUsers } = useAppSelector((state) => state.messages);
-  
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
@@ -160,8 +159,8 @@ useEffect(() => {
                   <div
                     key={i}
                     className={`flex ${msg.senderId === localStorage.getItem("userId")
-                        ? "justify-end"
-                        : "justify-start"
+                      ? "justify-end"
+                      : "justify-start"
                       }`}
                   >
                     <div className="bg-blue-100 p-3 rounded-lg max-w-sm">
@@ -181,6 +180,12 @@ useEffect(() => {
               <input
                 value={message}
                 onChange={handleTyping}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
                 placeholder="Write Something..."
                 className="flex-1 p-2 rounded-full border bg-gray-50"
               />

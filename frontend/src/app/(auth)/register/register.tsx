@@ -8,13 +8,18 @@ import { useRouter } from 'next/navigation';
 import { useForm } from "react-hook-form";
 import { toast } from 'react-toastify';
 import { signIn } from "next-auth/react"
+import { useState } from "react";
+import Image from 'next/image';
 
 
 const UserRegister = () => {
   const dispatch = useAppDispatch();
   const router = useRouter()
-    const registerUserSchema = useRegiserSchema();
-    const {
+  const [showUserPassword, setShowUserPassword] = useState(false);
+  console.log(showUserPassword, "showUserPassword");
+
+  const registerUserSchema = useRegiserSchema();
+  const {
     register,
     handleSubmit,
     reset,
@@ -23,19 +28,19 @@ const UserRegister = () => {
     resolver: yupResolver(registerUserSchema),
   });
 
-  const onSubmit=async(userData:any)=>{
+  const onSubmit = async (userData: any) => {
     try {
-     const result = await dispatch(registerUserThunk(userData)).unwrap();
+      const result = await dispatch(registerUserThunk(userData)).unwrap();
       toast.success(result.message)
-        router.push(`/login`)
-        reset({})
-    } catch (err:any) {
-      toast.error(err.message); 
+      router.push(`/login`)
+      reset({})
+    } catch (err: any) {
+      toast.error(err.message);
     }
   }
 
-  const googleClientId:string = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID as string;
- 
+  const googleClientId: string = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID as string;
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
       <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-8">
@@ -56,10 +61,10 @@ const UserRegister = () => {
               placeholder="Please enter  first name"
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-                  {errors?.firstName && <div className='text-red-700 text-sm pt-1.5'>{errors?.firstName?.message}</div>}
+            {errors?.firstName && <div className='text-red-700 text-sm pt-1.5'>{errors?.firstName?.message}</div>}
           </div>
 
-           <div>
+          <div>
             <label
               className="block text-sm font-medium text-gray-700 mb-1"
             >
@@ -71,7 +76,7 @@ const UserRegister = () => {
               placeholder="Please enter last name"
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-                  {errors?.lastName && <div className='text-red-700 text-sm pt-1.5'>{errors?.lastName?.message}</div>}
+            {errors?.lastName && <div className='text-red-700 text-sm pt-1.5'>{errors?.lastName?.message}</div>}
 
           </div>
           <div>
@@ -86,7 +91,7 @@ const UserRegister = () => {
               placeholder="Please enter last name"
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-                  {errors?.company && <div className='text-red-700 text-sm pt-1.5'>{errors?.company?.message}</div>}
+            {errors?.company && <div className='text-red-700 text-sm pt-1.5'>{errors?.company?.message}</div>}
           </div>
           <div>
             <label
@@ -95,33 +100,61 @@ const UserRegister = () => {
               Email
             </label>
             <input
-              type="email"
+              type="text"
               {...register("email")}
               placeholder="Please enter email"
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-                  {errors?.email && <div className='text-red-700 text-sm pt-1.5'>{errors?.email?.message}</div>}
+            {errors?.email && <div className='text-red-700 text-sm pt-1.5'>{errors?.email?.message}</div>}
           </div>
 
           <div>
-            <label
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Password
             </label>
-            <input
-              type="password"
-              {...register("password")}
-              placeholder="Please enter password"
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-                  {errors?.password && <div className='text-red-700 text-sm pt-1.5'>{errors?.password?.message}</div>}
+
+            <div className="relative"> 
+              <input
+                {...register("password")}
+                type={showUserPassword ? "text" : "password"}
+                placeholder="Please enter password"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+              />
+
+              <span
+                className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
+                onClick={() => setShowUserPassword((prev) => !prev)}
+              >
+                {showUserPassword ? (
+                  <Image
+                    src="/icons/eye-close.svg"
+                    alt="eye-close"
+                    width={24}
+                    height={24}
+                    className="invert-0 brightness-0"
+                  />
+                ) : (
+                  <Image
+                    src="/icons/eye-outline.svg"
+                    alt="eye"
+                    width={24}
+                    height={24}
+                    className="invert-0 brightness-0"
+                  />
+                )}
+              </span>
+            </div>
+            {errors?.password && (
+              <div className="text-red-700 text-sm pt-1.5">
+                {errors.password.message}
+              </div>
+            )}
           </div>
-              <div>
+          <div>
           </div>
           <button
             type="submit"
-            className="w-full bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 transition"
+            className="w-full bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 transition cursor-pointer"
           >
             Register
           </button>
@@ -133,7 +166,7 @@ const UserRegister = () => {
             Login
           </Link>
         </p>
-            {/* <div className="row">
+        {/* <div className="row">
               <div className="col-4">
                 <div className="d-grid">
                     <GoogleOAuthProvider clientId={googleClientId}>
@@ -143,18 +176,18 @@ const UserRegister = () => {
               </div>
             </div> */}
 
-            <button 
-                        onClick={() => signIn("google")} 
-                        className="p-2 bg-blue-500 text-white rounded"
-                      >
-                        Login with Google
-                      </button>
-                      <button 
-                        onClick={() => signIn("github")} 
-                        className="p-2 bg-gray-800 text-white rounded"
-                      >
-                        Login with GitHub
-                      </button>
+        <button
+          onClick={() => signIn("google")}
+          className="p-2 bg-blue-500 text-white rounded cursor-pointer"
+        >
+          Login with Google
+        </button>
+        <button
+          onClick={() => signIn("github")}
+          className="p-2 bg-gray-800 text-white rounded cursor-pointer"
+        >
+          Login with GitHub
+        </button>
       </div>
     </div>
   );

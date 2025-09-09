@@ -61,8 +61,8 @@ const Sidebar = () => {
           className="w-10 h-10 rounded-full"
         />
         <div>
-          <h2 className="font-semibold">{userName}</h2>
-          <p className="text-sm text-gray-500">{company}</p>
+          <h2 className="font-semibold">{session?.user?.name ||userName}</h2>
+            {!session?.user && company && (<p className="text-sm text-gray-500">{company}</p>)}
         </div>
       </div>
    

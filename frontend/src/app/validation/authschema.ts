@@ -10,7 +10,12 @@ export const useRegiserSchema=()=>{
         company:yup.string()
         .required("Company is required"),
         email:yup.string()
-        .required("Email is required"),
+        .required("Email is required")
+            .email("Invalid email address")
+            .matches(
+                /^[^\s@]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
+                "Invalid email format"
+            ),
         password:yup.string()
         .required("Password is required")
     })
@@ -18,8 +23,13 @@ export const useRegiserSchema=()=>{
 
 export const useLoginSchema=()=>{
     return yup.object({
-        email:yup.string()
-        .required("Email is required"),
+      email:yup.string()
+        .required("Email is required")
+            .email("Invalid email address")
+            .matches(
+                /^[^\s@]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
+                "Invalid email format"
+            ),
         password:yup.string()
         .required("Password is required"),
     })
