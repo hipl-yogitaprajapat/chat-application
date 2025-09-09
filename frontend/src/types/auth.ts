@@ -4,7 +4,8 @@ interface AuthState{
   error: any,
   message: string,
   success: boolean,
-  token:string
+  token:string,
+  profile:any,
 }
 
 interface AuthResponse {

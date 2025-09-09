@@ -67,3 +67,37 @@ export async function googlelogin(code:any):Promise<any>{
     return { success: false, message: error.message || "Something went wrong" };
     }
   }
+
+  
+  export async function updateProfileAction(formData:any):Promise<any>{
+    try {
+        const response = await axiosInstance.put(`${hostName}auth/update-profile`,formData,{
+          headers: {
+        "Content-Type": "multipart/form-data",
+        },
+        withCredentials: true
+        })
+        return response.data
+    } catch (error:any) { 
+    if (error.response && error.response.data) {
+      return error.response.data;
+    }
+    return { success: false, message: error.message || "Something went wrong" };
+    }
+}
+
+
+export async function viewProfileAction():Promise<any>{
+    try {
+        const response = await axiosInstance.get(`${hostName}auth/view-profile`,{
+              withCredentials: true,
+              headers: { 'Content-Type': 'application/json' }
+        })
+        return response.data
+    } catch (error:any) { 
+    if (error.response && error.response.data) {
+      return error.response.data;
+    }
+    return { success: false, message: error.message || "Something went wrong" };
+    }
+}

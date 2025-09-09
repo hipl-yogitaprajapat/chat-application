@@ -21,6 +21,7 @@ app.use(
 
 app.use("/api/auth",authRoutes)
 app.use("/api/messages",messageRoutes);
+app.use("/uploads", express.static("uploads"));
 server.listen(PORT,()=>{
     console.log("Server is running on Port : " + PORT);
     connectDB();

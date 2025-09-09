@@ -1,6 +1,8 @@
 import bcrypt from "bcrypt";
 import { generateToken } from "../lib/utils.js"
 import User from "../models/user.model.js";
+import fs from 'fs';
+import path from 'path';
 
 export const signup = async (req, res) => {
     // console.log("Received body:", req.body); 
@@ -108,3 +110,92 @@ export const logout = (req, res) => {
 
         }
     }
+
+
+export const updateProfile = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        if (!req.file) {
+            return res.status(400).json({ message: "Image file is required", success: false });
+        }
+
+        const allowedTypes = ['.jpg', '.jpeg', '.png'];
+        const ext = path.extname(req.file.originalname).toLowerCase();
+        if (!allowedTypes.includes(ext)) {
+            fs.unlinkSync(req.file.path); // delete the uploaded invalid file
+            return res.status(400).json({ message: "Only JPG, JPEG, and PNG images are allowed", success: false });
+        }
+
+        if (req.file.size > 1 * 1024 * 1024) {
+            fs.unlinkSync(req.file.path);
+            return res.status(400).json({ message: "Image must not be larger than 1MB", success: false });
+        }
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            fs.unlinkSync(req.file.path); // clean up uploaded file if user not found
+            return res.status(404).json({ message: "User not found", success: false });
+        }
+
+        // Remove old image if exists
+        if (user.image && fs.existsSync(`uploads/${user.image}`)) {
+            fs.unlinkSync(`uploads/${user.image}`);
+        }
+
+        // Update with new image
+        user.image = req.file.filename;
+        await user.save();
+
+        return res.status(200).json({ message: "Profile image updated successfully", success: true });
+    } catch (error) {
+        console.error("Error updating profile image:", error.message);
+        return res.status(500).json({ message: "Internal server error", success: false });
+    }
+};
+
+export const viewProfile = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found", success: false });
+    }
+
+    return res.status(200).json({
+      success: true,
+      image: user.image || null,
+    });
+  } catch (error) {
+    console.error("Error fetching profile image:", error.message);
+    return res.status(500).json({ message: "Internal server error", success: false });
+  }
+};
+
+export const removeProfile = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found", success: false });
+    }
+
+    if (user.image) {
+      const imagePath = path.join("uploads", user.image);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+      user.image = null;
+      await user.save();
+    }
+
+    return res.status(200).json({ message: "Profile image removed successfully", success: true });
+  } catch (error) {
+    console.error("Error removing profile image:", error.message);
+    return res.status(500).json({ message: "Internal server error", success: false });
+  }
+};

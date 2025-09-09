@@ -1,22 +1,27 @@
 "use client";
 
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { LogoutUser } from "@/store/slices/authSlice";
+import { LogoutUser, UpdateUserProfile, viewProfile } from "@/store/slices/authSlice";
 import { chatSidebarThunk, setSelectedUser } from "@/store/slices/messageSlice";
 import { removeCookie } from "@/utils/commons";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { toast } from "react-toastify";
+import { Plus } from "lucide-react";
 
 const Sidebar = () => {
-  const { data: session } = useSession()
+  const { data: session } = useSession();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { users } = useAppSelector((state) => state.messages);
+  const { profile } = useAppSelector((state) => state.auth);
   const [userName, setUserName] = useState<string | null>(null);
   const [company, setCompany] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     dispatch(chatSidebarThunk());
@@ -24,9 +29,27 @@ const Sidebar = () => {
     const storedCompany = localStorage.getItem("company");
     setUserName(storedName);
     setCompany(storedCompany);
+    dispatch(viewProfile());
   }, [dispatch]);
 
-  // filter users based on search term
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+
+    const previewURL = URL.createObjectURL(file);
+    setProfileImage(previewURL);
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const result = await dispatch(UpdateUserProfile(formData)).unwrap();
+      toast.success(result.message)
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   const filteredUsers = useMemo(() => {
     if (!Array.isArray(users)) return [];
     if (!searchTerm) return users;
@@ -41,27 +64,48 @@ const Sidebar = () => {
   const handleLogout = async () => {
     try {
       const result = await dispatch(LogoutUser()).unwrap();
-      console.log(result,"resultyyyyyy");
-       toast.success(result.message)
+      toast.success(result.message);
       removeCookie("token");
       removeCookie("is_login");
       removeCookie("role");
-      router.push(`/login`)
+      router.push(`/login`);
     } catch (err: any) {
-      toast.error(err.message); 
+      toast.error(err.message);
     }
-  }
+  };
 
   return (
     <div className="w-1/4 bg-white border-r flex flex-col">
-      <div className="p-4 border-b flex items-center gap-2">
-        <img
-          src="https://randomuser.me/api/portraits/men/1.jpg"
-          alt="profile"
-          className="w-10 h-10 rounded-full"
-        />
+      <div className="p-4 border-b flex items-center gap-2 relative">
+        <div className="relative">
+          <img
+            src={
+              profileImage
+                ? profileImage
+                : profile?.image
+                  ? `http://localhost:5001/uploads/${profile.image}`
+                  : "https://randomuser.me/api/portraits/men/1.jpg"
+            }
+            alt="profile"
+            className="w-12 h-12 rounded-full object-cover"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full p-1 hover:bg-blue-600"
+          >
+            <Plus size={14} />
+          </button>
+
+          <input
+            type="file"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+          />
+        </div>
+
         <div>
-          <h2 className="font-semibold">{session?.user?.name ||userName}</h2>
+          <h2 className="font-semibold">{session?.user?.name || userName}</h2>
             {!session?.user && company && (<p className="text-sm text-gray-500">{company}</p>)}
         </div>
       </div>
@@ -114,7 +158,7 @@ const Sidebar = () => {
       ) : (
         <button
           onClick={handleLogout}
-          className="p-2 bg-green-200 text-white rounded"
+          className="p-2 bg-red-500 text-white rounded"
         >
           Logout
         </button>
