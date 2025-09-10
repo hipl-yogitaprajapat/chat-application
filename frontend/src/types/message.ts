@@ -15,6 +15,7 @@ interface Message {
   receiverId: string;
   text: string;
   createdAt?: string;
+  attachment?: string | null;
 }
 
  interface User {

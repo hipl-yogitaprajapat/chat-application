@@ -30,8 +30,8 @@ export const chatSidebarThunk = createAsyncThunk<
 
 export const sendMessageThunk = createAsyncThunk(
   "chat/sendMessage",
-  async ({ receiverId, text }: { receiverId: string; text: string }) => {
-    return await sendChatMessage(receiverId, text);
+  async ({ receiverId, formData }: { receiverId: string; formData: FormData }) => {
+    return await sendChatMessage(receiverId, formData);
   }
 );
 

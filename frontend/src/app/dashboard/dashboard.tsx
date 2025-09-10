@@ -9,9 +9,11 @@ const Dashboard = () => {
   const dispatch = useAppDispatch();
   const { selectedUser, messages, onlineUsers } = useAppSelector((state) => state.messages);
   const [message, setMessage] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
   const [isTyping, setIsTyping] = useState(false);
 
   const typingTimeout = useRef<NodeJS.Timeout | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const userId = localStorage.getItem("userId");
@@ -52,20 +54,28 @@ const Dashboard = () => {
   }, [selectedUser, dispatch]);
 
   const handleSend = () => {
-    if (!message.trim() || !selectedUser) return;
+    if (!message.trim() && !attachment) return;
+    if (!selectedUser) return;
+
+    const formData = new FormData();
+    formData.append("text", message);
+    if (attachment) formData.append("attachment", attachment);
+
 
     const newMsg = {
       text: message,
+      attachment: attachment ? URL.createObjectURL(attachment) : null,
       senderId: localStorage.getItem("userId"),
       receiverId: selectedUser._id,
       createdAt: new Date().toISOString(),
     };
 
     dispatch(addMessage(newMsg));
-    dispatch(sendMessageThunk({ receiverId: selectedUser._id, text: message }));
+    dispatch(sendMessageThunk({ receiverId: selectedUser._id, formData }));
 
     setMessage("");
-    // stop typing immediately after send
+    setAttachment(null);
+
     const socket = getSocket();
     if (socket && selectedUser) {
       socket.emit("userTyping", {
@@ -99,13 +109,10 @@ const Dashboard = () => {
     }
   };
 
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
 useEffect(() => {
-  if (messagesEndRef.current) {
-    messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-  }
-}, [messages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -147,7 +154,6 @@ useEffect(() => {
             {/* Messages */}
             <div className="flex-1 p-4 space-y-4 overflow-y-auto">
               {messages.map((msg, i) => {
-                // Convert createdAt into a readable local time
                 const time = msg.createdAt
                   ? new Date(msg.createdAt).toLocaleTimeString([], {
                     hour: "2-digit",
@@ -165,6 +171,15 @@ useEffect(() => {
                   >
                     <div className="bg-blue-100 p-3 rounded-lg max-w-sm">
                       <p>{msg.text}</p>
+                      {msg.attachment && (
+                        <a
+                          href={msg.attachment}
+                          target="_blank"
+                          className="text-blue-600 underline block mt-1"
+                        >
+                          Attachment
+                        </a>
+                      )}
                       <span className="text-xs text-gray-500 block mt-1 text-right">
                         {time}
                       </span>
@@ -177,6 +192,20 @@ useEffect(() => {
 
             {/* Input */}
             <div className="p-4 border-t flex items-center gap-2">
+              {/* Attachment */}
+              <input
+                type="file"
+                id="attachment"
+                className="hidden"
+                onChange={(e) => setAttachment(e.target.files?.[0] || null)}
+              />
+              <label
+                htmlFor="attachment"
+                className="cursor-pointer p-2 bg-gray-200 rounded-full"
+              >
+                📎
+              </label>
+
               <input
                 value={message}
                 onChange={handleTyping}
@@ -189,6 +218,20 @@ useEffect(() => {
                 placeholder="Write Something..."
                 className="flex-1 p-2 rounded-full border bg-gray-50"
               />
+
+              {/* Show selected attachment */}
+              {attachment && (
+                <span className="text-sm text-gray-700 bg-gray-100 px-2 py-1 rounded-full flex items-center gap-1">
+                  {attachment.name}
+                  <button
+                    type="button"
+                    className="text-red-500 font-bold"
+                    onClick={() => setAttachment(null)}
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
               <button
                 onClick={handleSend}
                 className="p-2 bg-blue-500 text-white rounded-full px-4"

@@ -20,23 +20,21 @@ export async function chatSidebar(): Promise<any> {
     }
 }
 
-export async function sendChatMessage(receiverId: string, text: string) {
-      try {
-       const res = await axiosInstance.post(
-        `${hostName}messages/send/${receiverId}`,
-        { text },
-        { withCredentials: true }
+export async function sendChatMessage(receiverId: string, formData: FormData) {
+  try {
+    const res = await axiosInstance.post(
+      `${hostName}messages/send/${receiverId}`,
+      formData,
+      {
+        withCredentials: true,
+        headers: { "Content-Type": "multipart/form-data" },
+      }
     );
     return res.data;
-
-    } catch (error: any) {
-        if (error.response && error.response.data) {
-            return error.response.data;
-        }
-        return { success: false, message: error.message || "Something went wrong" };
-    }
-
-  
+  } catch (error: any) {
+    if (error.response && error.response.data) return error.response.data;
+    return { success: false, message: error.message || "Something went wrong" };
+  }
 }
 
 
