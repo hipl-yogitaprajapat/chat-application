@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 import Message from "../models/message.model.js";
 import User from "../models/user.model.js";
@@ -48,13 +49,24 @@ export const getUsersForSidebar = async (req, res) => {
         receiverId,
         text,
         attachment: req.file ? `/uploads/${req.file.filename}` : null,
+        isRead:false,
+        delivered:false
       });
+      console.log(newMessage,"newMessage");
   
       await newMessage.save();
+
+  const unreadCount = await Message.aggregate([
+  { $match: { receiverId: new mongoose.Types.ObjectId(receiverId), isRead: false } },
+  { $group: { _id: "$senderId", count: { $sum: 1 } } }
+]);
+    console.log(unreadCount,"unreadCount");
+    
   
       const receiverSocketId = getReceiverSocketId(receiverId);
       if (receiverSocketId) {
         io.to(receiverSocketId).emit("newMessage", newMessage);
+         io.to(receiverSocketId).emit("unreadCountsUpdate", unreadCount);
       }
   
       res.status(201).json(newMessage);
@@ -63,3 +75,31 @@ export const getUsersForSidebar = async (req, res) => {
       res.status(500).json({ error: "Internal server error" });
     }
   };
+
+export const markMessagesAsRead = async (req, res) => {
+  try {
+    const { senderId } = req.params;
+    const myId = req.user._id;
+
+    await Message.updateMany(
+      { senderId, receiverId: myId, isRead: false },
+      { $set: { isRead: true } }
+    );
+
+    // Recalculate unread counts for sidebar
+    const unreadCounts = await Message.aggregate([
+      { $match: { receiverId: myId, isRead: false } },
+      { $group: { _id: "$senderId", count: { $sum: 1 } } }
+    ]);
+
+    const receiverSocketId = getReceiverSocketId(myId.toString());
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("unreadCountsUpdate", unreadCounts);
+    }
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.log("Error in markMessagesAsRead:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};

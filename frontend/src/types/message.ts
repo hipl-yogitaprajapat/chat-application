@@ -8,6 +8,7 @@ interface MessageState{
   messages: Message[];
   onlineUsers: string[];
   selectedUser: User | null,
+  unreadCounts: Record<string, number>;
 }
 interface Message {
   _id?: string;

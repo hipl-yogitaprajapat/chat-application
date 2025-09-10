@@ -54,3 +54,16 @@ export async function chathistory(id: string) {
     }
 
 }
+
+export async function markMessagesAsReadApi(senderId: string) {
+  try {
+    const res = await axiosInstance.put(`${hostName}messages/mark-read/${senderId}`,{}, {
+      withCredentials: true,
+      headers: { "Content-Type": "application/json" }
+    });
+    return res.data;
+  } catch (error: any) {
+    if (error.response && error.response.data) return error.response.data;
+    return { success: false, message: error.message || "Something went wrong" };
+  }
+}

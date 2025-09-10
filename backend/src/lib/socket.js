@@ -1,6 +1,8 @@
 import { Server } from "socket.io";
 import http from "http";
 import express from "express";
+import Message from "../models/message.model.js";
+import mongoose from "mongoose";
 
 const app = express();
 const server = http.createServer(app);
@@ -20,11 +22,24 @@ export function getReceiverSocketId(userId) {
 
 const userSocketMap = {}; // {userId: socketId}
 
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
     console.log("A user connected", socket.id);
     const userId = socket.handshake.query.userId;
     if (userId) userSocketMap[userId] = socket.id;
     console.log(userId,"userid");
+
+const unreadCounts = await Message.aggregate([
+    { $match: { receiverId: new mongoose.Types.ObjectId(userId), isRead: false } },
+    { $group: { _id: "$senderId", count: { $sum: 1 } } }
+  ]);
+
+  const formattedUnreadCounts = unreadCounts.map(c => ({
+  senderId: c._id.toString(),
+  count: c.count
+}));
+
+  io.to(socket.id).emit("initialUnreadCounts", formattedUnreadCounts);
+
     
     // io.emit() is used to send events to all the connected clients
     io.emit("getOnlineUsers", Object.keys(userSocketMap));

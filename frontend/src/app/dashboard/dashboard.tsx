@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { connectSocket, getSocket, disconnectSocket } from "../../lib/socket";
-import { addMessage, fetchChatHistoryThunk, sendMessageThunk, setOnlineUsers } from "@/store/slices/messageSlice";
+import { addMessage, fetchChatHistoryThunk, sendMessageThunk, setOnlineUsers, setUnreadCounts } from "@/store/slices/messageSlice";
 
 const Dashboard = () => {
   const dispatch = useAppDispatch();
@@ -24,13 +24,27 @@ const Dashboard = () => {
     const socket = getSocket();
     if (!socket) return;
 
+    socket.on("initialUnreadCounts", (data) => {
+    dispatch(setUnreadCounts(data));
+  });
+
     socket.on("newMessage", (msg) => {
       dispatch(addMessage(msg));
+      if (!selectedUser || msg.senderId !== selectedUser._id) {
+      dispatch({
+        type: "messages/incrementUnread",
+        payload: msg.senderId,
+      });
+    }
     });
 
     socket.on("getOnlineUsers", (users) => {
       dispatch(setOnlineUsers(users));
     });
+
+     socket.on("unreadCountsUpdate", (data) => {
+       dispatch(setUnreadCounts(data));
+  });
 
     // listen for typing
     socket.on("userTyping", ({ senderId, isTyping }) => {
@@ -41,6 +55,7 @@ const Dashboard = () => {
 
     return () => {
       socket?.off("newMessage");
+      socket?.off("unreadCountsUpdate");
       socket?.off("getOnlineUsers");
       socket?.off("userTyping");
       disconnectSocket();
