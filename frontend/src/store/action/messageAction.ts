@@ -67,3 +67,18 @@ export async function markMessagesAsReadApi(senderId: string) {
     return { success: false, message: error.message || "Something went wrong" };
   }
 }
+
+
+export async function deleteMessage(messageId: string) {
+  try {
+    const res = await axiosInstance.delete(`${hostName}messages/delete/${messageId}`, {
+      withCredentials: true,
+      headers: { "Content-Type": "application/json" }
+    });
+    return res.data;
+    
+  } catch (error: any) {
+    if (error.response && error.response.data) return error.response.data;
+    return { success: false, message: error.message || "Something went wrong" };
+  }
+}

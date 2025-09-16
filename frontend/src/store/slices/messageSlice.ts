@@ -1,7 +1,7 @@
 "use client";
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { registerAction } from "../action/authAction";
-import { chathistory, chatSidebar, markMessagesAsReadApi, sendChatMessage } from "../action/messageAction";
+import { chathistory, chatSidebar, deleteMessage, markMessagesAsReadApi, sendChatMessage } from "../action/messageAction";
 
 const initialState: MessageState = {
   users: [],
@@ -59,6 +59,18 @@ export const markMessagesAsReadThunk = createAsyncThunk(
   }
 );
 
+
+export const deleteMessageThunk = createAsyncThunk(
+  "chat/deletemessage",
+  async (messageId: string, { rejectWithValue }) => {
+    try {
+      await deleteMessage(messageId);
+      return messageId;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to mark messages as read");
+    }
+  }
+);
 
 const chatSlice = createSlice({
   name: "auth",
@@ -150,6 +162,23 @@ const chatSlice = createSlice({
     });
 
     builder.addCase(markMessagesAsReadThunk.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+     builder.addCase(deleteMessageThunk.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+
+    builder.addCase(deleteMessageThunk.fulfilled, (state, action) => {
+      console.log(action,"action789");
+      
+      state.isLoading = false;
+      state.success = true;
+      // state.messages = action.payload;
+    });
+
+    builder.addCase(deleteMessageThunk.rejected, (state, action) => {
       state.isLoading = false;
       state.error = action.payload as string;
     });

@@ -3,16 +3,19 @@ import { useEffect, useState, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { connectSocket, getSocket, disconnectSocket } from "../../lib/socket";
-import { addMessage, fetchChatHistoryThunk, markMessagesAsReadThunk, sendMessageThunk, setOnlineUsers, setUnreadCounts } from "@/store/slices/messageSlice";
+import { addMessage, deleteMessageThunk, fetchChatHistoryThunk, markMessagesAsReadThunk, sendMessageThunk, setOnlineUsers, setUnreadCounts } from "@/store/slices/messageSlice";
+import { toast } from "react-toastify";
 
 const Dashboard = () => {
   const dispatch = useAppDispatch();
   const { selectedUser, messages, onlineUsers } = useAppSelector((state) => state.messages);
-  console.log(messages,"messagesssss");
-  
+  console.log(messages, "messagesssss");
+
   const [message, setMessage] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [menuOpenId, setMenuOpenId] = useState<string | null | undefined>(null);
+  console.log(menuOpenId, "menuOpenId");
 
   const typingTimeout = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -37,7 +40,7 @@ const Dashboard = () => {
           type: "messages/incrementUnread",
           payload: msg.senderId,
         });
-      }else {
+      } else {
         dispatch(markMessagesAsReadThunk(msg.senderId));
         // dispatch(clearUnread(msg.senderId));
       }
@@ -88,7 +91,7 @@ const Dashboard = () => {
       senderId: localStorage.getItem("userId"),
       receiverId: selectedUser._id,
       createdAt: new Date().toISOString(),
-    }; 
+    };
 
     dispatch(addMessage(newMsg));
     dispatch(sendMessageThunk({ receiverId: selectedUser._id, formData }));
@@ -134,6 +137,18 @@ const Dashboard = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+
+  const handleDelete = async (messageId: string) => {
+    try {
+      const result = await dispatch(deleteMessageThunk(messageId)).unwrap();
+      console.log(result, "result");
+
+      // toast.success(result.message)
+    } catch (err: any) {
+      toast.error(err?.message);
+    }
+  }
+
   return (
     <div className="flex h-screen bg-gray-100">
       <Sidebar />
@@ -173,45 +188,86 @@ const Dashboard = () => {
 
             {/* Messages */}
             <div className="flex-1 p-4 space-y-4 overflow-y-auto">
-              {messages.filter((msg) =>
-                (msg.senderId === selectedUser._id &&
-                  msg.receiverId === localStorage.getItem("userId")) ||
-                (msg.receiverId === selectedUser._id &&
-                  msg.senderId === localStorage.getItem("userId"))
-              ).map((msg, i) => {
-                const time = msg.createdAt
-                  ? new Date(msg.createdAt).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                  : "";
 
-                return (
-                  <div
-                    key={i}
-                    className={`flex ${msg.senderId === localStorage.getItem("userId")
-                      ? "justify-end"
-                      : "justify-start"
-                      }`}
-                  >
-                    <div className="bg-blue-100 p-3 rounded-lg max-w-sm">
-                      <p>{msg.text}</p>
-                      {msg.attachment && (
-                        <a
-                          href={msg.attachment}
-                          target="_blank"
-                          className="text-blue-600 underline block mt-1"
-                        >
-                          Attachment
-                        </a>
-                      )}
-                      <span className="text-xs text-gray-500 block mt-1 text-right">
-                        {time}
-                      </span>
+              {messages
+                .filter((msg) =>
+                  (msg.senderId === selectedUser._id &&
+                    msg.receiverId === localStorage.getItem("userId")) ||
+                  (msg.receiverId === selectedUser._id &&
+                    msg.senderId === localStorage.getItem("userId"))
+                )
+                .map((msg, i) => {
+                  const time = msg.createdAt
+                    ? new Date(msg.createdAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                    : "";
+
+                  const isMyMessage = msg.senderId === localStorage.getItem("userId");
+
+                  return (
+                    <div
+                      key={i}
+                      className={`flex ${isMyMessage ? "justify-end" : "justify-start"}`}
+                    >
+                      <div className="relative group bg-blue-100 p-3 rounded-lg max-w-sm">
+                        <p>{msg.text}</p>
+                        {msg.attachment && (
+                          <a
+                            href={msg.attachment}
+                            target="_blank"
+                            className="text-blue-600 underline block mt-1"
+                          >
+                            Attachment
+                          </a>
+                        )}
+                        <span className="text-xs text-gray-500 block mt-1 text-right">
+                          {time}
+                        </span>
+
+                        {/* 3 Dots Button (only show for my own messages) */}
+                        {isMyMessage && (
+                          <button
+                            onClick={() =>
+                              setMenuOpenId(menuOpenId === msg.createdAt ? null : msg.createdAt)
+                            }
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                          >
+                            ⋮
+                          </button>
+                        )}
+
+                        {/* Dropdown Menu */}
+                        {menuOpenId === msg.createdAt && (
+                          <div className="absolute right-0 top-8 bg-white border shadow-md rounded-md w-28 z-50">
+                            <button
+                              className="block w-full text-left px-3 py-2 hover:bg-gray-100"
+                            // onClick={() => {
+                            //   console.log("Edit", msg);
+                            //   setMenuOpenId(null);
+                            // }}
+                            // onClick={() => handleEdit(msg)}
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-red-500"
+                              // onClick={() => {
+                              //   console.log("Delete", msg);
+                              //   setMenuOpenId(null);
+                              // }}
+                              onClick={() => handleDelete(msg?._id)}
+                            >
+                              🗑 Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+
               <div ref={messagesEndRef} />
             </div>
 
