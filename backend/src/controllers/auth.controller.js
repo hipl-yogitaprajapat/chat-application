@@ -113,52 +113,65 @@ export const logout = (req, res) => {
 
 
 export const updateProfile = async (req, res) => {
-    try {
-        const userId = req.user._id;
+  try {
+    const userId = req.user._id;
+    const { firstName, lastName, company, password } = req.body;
 
-        if (!req.file) {
-            return res.status(400).json({ message: "Image file is required", success: false });
-        }
-
-        const allowedTypes = ['.jpg', '.jpeg', '.png'];
-        const ext = path.extname(req.file.originalname).toLowerCase();
-        if (!allowedTypes.includes(ext)) {
-            fs.unlinkSync(req.file.path); // delete the uploaded invalid file
-            return res.status(400).json({ message: "Only JPG, JPEG, and PNG images are allowed", success: false });
-        }
-
-        if (req.file.size > 1 * 1024 * 1024) {
-            fs.unlinkSync(req.file.path);
-            return res.status(400).json({ message: "Image must not be larger than 1MB", success: false });
-        }
-
-        const user = await User.findById(userId);
-
-        if (!user) {
-            fs.unlinkSync(req.file.path); // clean up uploaded file if user not found
-            return res.status(404).json({ message: "User not found", success: false });
-        }
-
-        // Remove old image if exists
-        if (user.image && fs.existsSync(`uploads/${user.image}`)) {
-            fs.unlinkSync(`uploads/${user.image}`);
-        }
-
-        // Update with new image
-        user.image = req.file.filename;
-        await user.save();
-
-        return res.status(200).json({ message: "Profile image updated successfully", success: true });
-    } catch (error) {
-        console.error("Error updating profile image:", error.message);
-        return res.status(500).json({ message: "Internal server error", success: false });
+    const user = await User.findById(userId);
+    if (!user) {
+      if (req.file) fs.unlinkSync(req.file.path);
+      return res.status(404).json({ message: "User not found", success: false });
     }
+
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+    if (company) user.company = company;
+
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+    }
+
+    if (req.file) {
+      const allowedTypes = [".jpg", ".jpeg", ".png"];
+      const ext = path.extname(req.file.originalname).toLowerCase();
+
+      if (!allowedTypes.includes(ext)) {
+        fs.unlinkSync(req.file.path);
+        return res
+          .status(400)
+          .json({ message: "Only JPG, JPEG, and PNG images are allowed", success: false });
+      }
+
+      if (req.file.size > 1 * 1024 * 1024) {
+        fs.unlinkSync(req.file.path);
+        return res
+          .status(400)
+          .json({ message: "Image must not be larger than 1MB", success: false });
+      }
+
+      // Remove old image
+      if (user.image && fs.existsSync(`uploads/${user.image}`)) {
+        fs.unlinkSync(`uploads/${user.image}`);
+      }
+
+      user.image = req.file.filename;
+    }
+
+    await user.save();
+
+    return res
+      .status(200)
+      .json({ message: "Profile updated successfully", success: true });
+  } catch (error) {
+    console.error("Error updating profile:", error.message);
+    return res.status(500).json({ message: "Internal server error", success: false });
+  }
 };
 
 export const viewProfile = async (req, res) => {
   try {
     const userId = req.user._id;
-
     const user = await User.findById(userId).select("-password");
 
     if (!user) {
@@ -167,13 +180,17 @@ export const viewProfile = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      image: user.image || null,
+        firstName: user.firstName || null,
+        lastName: user.lastName || null,
+        company: user.company || null,
+        image: user.image || null,
     });
   } catch (error) {
-    console.error("Error fetching profile image:", error.message);
+    console.error("Error fetching profile:", error.message);
     return res.status(500).json({ message: "Internal server error", success: false });
   }
 };
+
 
 export const removeProfile = async (req, res) => {
   try {

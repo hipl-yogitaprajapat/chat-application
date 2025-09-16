@@ -84,6 +84,8 @@ const Dashboard = () => {
       receiverId: selectedUser._id,
       createdAt: new Date().toISOString(),
     };
+    console.log(newMsg,"newMsg");
+    
 
     dispatch(addMessage(newMsg));
     dispatch(sendMessageThunk({ receiverId: selectedUser._id, formData }));
@@ -168,7 +170,12 @@ useEffect(() => {
 
             {/* Messages */}
             <div className="flex-1 p-4 space-y-4 overflow-y-auto">
-              {messages.map((msg, i) => {
+              {messages.filter((msg) =>
+                (msg.senderId === selectedUser._id &&
+                 msg.receiverId === localStorage.getItem("userId")) ||
+                (msg.receiverId === selectedUser._id &&
+                msg.senderId === localStorage.getItem("userId"))
+                 ).map((msg, i) => {
                 const time = msg.createdAt
                   ? new Date(msg.createdAt).toLocaleTimeString([], {
                     hour: "2-digit",

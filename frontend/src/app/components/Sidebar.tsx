@@ -6,9 +6,8 @@ import { chatSidebarThunk, clearUnread, markMessagesAsReadThunk, setSelectedUser
 import { removeCookie } from "@/utils/commons";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { toast } from "react-toastify";
-import { Plus, Trash } from "lucide-react";
 import Link from "next/link";
 
 const Sidebar = () => {
@@ -17,49 +16,12 @@ const Sidebar = () => {
   const dispatch = useAppDispatch();
   const { users, unreadCounts,selectedUser  } = useAppSelector((state) => state.messages);
   const { profile } = useAppSelector((state) => state.auth);
-  const [userName, setUserName] = useState<string | null>(null);
-  const [company, setCompany] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [profileImage, setProfileImage] = useState<string | null>(null);
-
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     dispatch(chatSidebarThunk());
-    const storedName = localStorage.getItem("name");
-    const storedCompany = localStorage.getItem("company");
-    setUserName(storedName);
-    setCompany(storedCompany);
     dispatch(viewProfile());
   }, [dispatch]);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !e.target.files[0]) return;
-    const file = e.target.files[0];
-
-    const previewURL = URL.createObjectURL(file);
-    setProfileImage(previewURL);
-
-    const formData = new FormData();
-    formData.append("image", file);
-
-    try {
-      const result = await dispatch(UpdateUserProfile(formData)).unwrap();
-      toast.success(result.message)
-    } catch (err: any) {
-      toast.error(err.message);
-    }
-  };
-
-  const handleRemoveProfile=async()=>{
-    try {
-      const result = await dispatch(removeProfile()).unwrap();
-      toast.success(result.message)
-    } catch (err: any) {
-      toast.error(err.message);
-    }
-    
-  }
 
   const filteredUsers = useMemo(() => {
     if (!Array.isArray(users)) return [];
@@ -97,44 +59,18 @@ const Sidebar = () => {
         <div className="relative w-16 h-16">
           <img
             src={
-              profileImage
-                ? profileImage
-                : profile?.image
+                 profile?.image
                   ? `http://localhost:5001/uploads/${profile.image}`
                   : "https://randomuser.me/api/portraits/men/1.jpg"
             }
             alt="profile"
             className="w-full h-full rounded-full object-cover border-2 border-gray-200"
           />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full p-1 hover:bg-blue-600 transition"
-            title="Change Profile"
-          >
-            <Plus size={14} />
-          </button>
-
-          {profileImage || profile?.image ? (
-            <button
-              onClick={handleRemoveProfile}
-              className="absolute bottom-0 left-0 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition"
-              title="Remove Profile"
-            >
-              <Trash size={14} />
-            </button>
-          ) : null}
-
-          <input
-            type="file"
-            className="hidden"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-          />
         </div>
 
         <div>
-          <h2 className="font-semibold">{session?.user?.name || userName}</h2>
-          {!session?.user && company && (<p className="text-sm text-gray-500">{company}</p>)}
+          <h2 className="font-semibold">{session?.user?.name || `${profile?.firstName || ""} ${profile?.lastName || ""}`}</h2>
+          {!session?.user && profile?.company && (<p className="text-sm text-gray-500">{profile?.company}</p>)}
         </div>
       </div>
    
@@ -150,7 +86,7 @@ const Sidebar = () => {
       </div>
 
       <div className="overflow-y-auto flex-1">
-        {filteredUsers.map((user) => {        
+        {filteredUsers.map((user) => {    
       // const unread = unreadCounts[user._id] || 0;
           const unread = user._id === selectedUser?._id ? 0 : unreadCounts[user._id] || 0;
   
