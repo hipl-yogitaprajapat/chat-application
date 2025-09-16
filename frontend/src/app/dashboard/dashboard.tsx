@@ -3,11 +3,13 @@ import { useEffect, useState, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { connectSocket, getSocket, disconnectSocket } from "../../lib/socket";
-import { addMessage, fetchChatHistoryThunk, sendMessageThunk, setOnlineUsers, setUnreadCounts } from "@/store/slices/messageSlice";
+import { addMessage, fetchChatHistoryThunk, markMessagesAsReadThunk, sendMessageThunk, setOnlineUsers, setUnreadCounts } from "@/store/slices/messageSlice";
 
 const Dashboard = () => {
   const dispatch = useAppDispatch();
   const { selectedUser, messages, onlineUsers } = useAppSelector((state) => state.messages);
+  console.log(messages,"messagesssss");
+  
   const [message, setMessage] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
   const [isTyping, setIsTyping] = useState(false);
@@ -25,26 +27,29 @@ const Dashboard = () => {
     if (!socket) return;
 
     socket.on("initialUnreadCounts", (data) => {
-    dispatch(setUnreadCounts(data));
-  });
+      dispatch(setUnreadCounts(data));
+    });
 
     socket.on("newMessage", (msg) => {
       dispatch(addMessage(msg));
       if (!selectedUser || msg.senderId !== selectedUser._id) {
-      dispatch({
-        type: "messages/incrementUnread",
-        payload: msg.senderId,
-      });
-    }
+        dispatch({
+          type: "messages/incrementUnread",
+          payload: msg.senderId,
+        });
+      }else {
+        dispatch(markMessagesAsReadThunk(msg.senderId));
+        // dispatch(clearUnread(msg.senderId));
+      }
     });
 
     socket.on("getOnlineUsers", (users) => {
       dispatch(setOnlineUsers(users));
     });
 
-     socket.on("unreadCountsUpdate", (data) => {
-       dispatch(setUnreadCounts(data));
-  });
+    socket.on("unreadCountsUpdate", (data) => {
+      dispatch(setUnreadCounts(data));
+    });
 
     // listen for typing
     socket.on("userTyping", ({ senderId, isTyping }) => {
@@ -83,9 +88,7 @@ const Dashboard = () => {
       senderId: localStorage.getItem("userId"),
       receiverId: selectedUser._id,
       createdAt: new Date().toISOString(),
-    };
-    console.log(newMsg,"newMsg");
-    
+    }; 
 
     dispatch(addMessage(newMsg));
     dispatch(sendMessageThunk({ receiverId: selectedUser._id, formData }));
@@ -103,7 +106,7 @@ const Dashboard = () => {
     }
   };
 
-  const handleTyping = (e:any) => {
+  const handleTyping = (e: any) => {
     setMessage(e.target.value);
 
     const socket = getSocket();
@@ -127,7 +130,7 @@ const Dashboard = () => {
   };
 
 
-useEffect(() => {
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -172,10 +175,10 @@ useEffect(() => {
             <div className="flex-1 p-4 space-y-4 overflow-y-auto">
               {messages.filter((msg) =>
                 (msg.senderId === selectedUser._id &&
-                 msg.receiverId === localStorage.getItem("userId")) ||
+                  msg.receiverId === localStorage.getItem("userId")) ||
                 (msg.receiverId === selectedUser._id &&
-                msg.senderId === localStorage.getItem("userId"))
-                 ).map((msg, i) => {
+                  msg.senderId === localStorage.getItem("userId"))
+              ).map((msg, i) => {
                 const time = msg.createdAt
                   ? new Date(msg.createdAt).toLocaleTimeString([], {
                     hour: "2-digit",

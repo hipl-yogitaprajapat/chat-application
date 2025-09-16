@@ -1,47 +1,58 @@
 "use client";
 
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { viewProfile, UpdateUserProfile, removeProfile } from "@/store/slices/authSlice";
-import { ToastContainer, toast } from "react-toastify";
+import { viewProfile, UpdateUserProfile, removeProfile} from "@/store/slices/authSlice";
+import { toast } from "react-toastify";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { useProfileSchema } from "../validation/authschema";
+import { yupResolver } from "@hookform/resolvers/yup";
 
 const UserProfile = () => {
   const dispatch = useAppDispatch();
-  const router = useRouter()
+  const profileSchema = useProfileSchema();
+  const router = useRouter();
   const { profile } = useAppSelector((state) => state.auth);
 
-  console.log(profile,"profile");
   
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [company, setCompany] = useState("");
-  const [password, setPassword] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Load profile on mount
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: yupResolver(profileSchema),
+  });
+
   useEffect(() => {
     dispatch(viewProfile());
   }, [dispatch]);
 
-  // Prefill form when profile changes
   useEffect(() => {
     if (profile) {
-      setFirstName(profile.firstName || "");
-      setLastName(profile.lastName || "");
-      setCompany(profile.company || "");
+      reset({
+        firstName: profile.firstName || "",
+        lastName: profile.lastName || "",
+        company: profile.company || "",
+        password: "",
+      });
     }
-  }, [profile]);
+  }, [profile, reset]);
 
-  // Handle profile update (image + text fields)
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Handle update
+  const onSubmit = async (data:any) => {
     const formData = new FormData();
-    formData.append("firstName", firstName);
-    formData.append("lastName", lastName);
-    formData.append("company", company);
-    if (password) formData.append("password", password);
+    formData.append("firstName", data.firstName);
+    formData.append("lastName", data.lastName);
+    formData.append("company", data.company);
+   if (data.password && data.password.trim() !== "") {
+  formData.append("password", data.password);
+}
+
     if (fileInputRef.current?.files?.[0]) {
       formData.append("image", fileInputRef.current.files[0]);
     }
@@ -49,14 +60,13 @@ const UserProfile = () => {
     try {
       const result = await dispatch(UpdateUserProfile(formData)).unwrap();
       toast.success(result.message);
-      setPassword("");
-      router.push(`/dashboard`)
+      router.push(`/dashboard`);
     } catch (err: any) {
       toast.error(err.message);
     }
   };
 
-  // Remove profile picture
+  // Remove profile image
   const handleRemoveProfile = async () => {
     try {
       const result = await dispatch(removeProfile()).unwrap();
@@ -70,7 +80,6 @@ const UserProfile = () => {
 
   return (
     <div className="flex h-screen bg-gray-100">
-
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="bg-white shadow px-6 py-4 flex justify-between items-center">
@@ -80,7 +89,7 @@ const UserProfile = () => {
         {/* Profile Section */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="bg-white shadow rounded-2xl p-6">
-            <form onSubmit={handleUpdateProfile} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* Profile Picture */}
               <div className="flex flex-col items-center relative">
                 <img
@@ -98,7 +107,10 @@ const UserProfile = () => {
                 <input
                   type="file"
                   className="hidden"
-                  ref={fileInputRef}
+                  {...register("image")}
+                  ref={(e) => {
+                    fileInputRef.current = e;
+                  }}
                   onChange={(e) => {
                     if (e.target.files?.[0]) {
                       const previewURL = URL.createObjectURL(e.target.files[0]);
@@ -106,6 +118,9 @@ const UserProfile = () => {
                     }
                   }}
                 />
+                {errors.image && (
+                  <p className="text-red-600 text-sm mt-1">{errors.image.message}</p>
+                )}
 
                 <div className="mt-3 flex space-x-3">
                   <button
@@ -127,7 +142,7 @@ const UserProfile = () => {
                 </div>
               </div>
 
-              {/* Personal Details Form */}
+              {/* Personal Details */}
               <div>
                 <h4 className="text-lg font-bold text-gray-700 mb-4">
                   Personal Details
@@ -137,35 +152,46 @@ const UserProfile = () => {
                     <label className="text-sm text-gray-500">First Name</label>
                     <input
                       type="text"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
+                      {...register("firstName")}
                       className="w-full mt-1 p-2 border rounded"
                     />
+                    {errors.firstName && (
+                      <p className="text-red-600 text-sm">
+                        {errors.firstName.message}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm text-gray-500">Last Name</label>
                     <input
                       type="text"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
+                      {...register("lastName")}
                       className="w-full mt-1 p-2 border rounded"
                     />
+                    {errors.lastName && (
+                      <p className="text-red-600 text-sm">
+                        {errors.lastName.message}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm text-gray-500">Company</label>
                     <input
                       type="text"
-                      value={company}
-                      onChange={(e) => setCompany(e.target.value)}
+                      {...register("company")}
                       className="w-full mt-1 p-2 border rounded"
                     />
+                    {errors.company && (
+                      <p className="text-red-600 text-sm">
+                        {errors.company.message}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm text-gray-500">New Password</label>
                     <input
                       type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      {...register("password")}
                       className="w-full mt-1 p-2 border rounded"
                       placeholder="Leave blank to keep same"
                     />
@@ -189,14 +215,19 @@ const UserProfile = () => {
             Copyright © <a href="#">Codedthemes</a>
           </p>
           <ul className="flex space-x-4 text-sm text-gray-500">
-            <li><a href="#">Home</a></li>
-            <li><a href="#">Privacy Policy</a></li>
-            <li><a href="#">Contact us</a></li>
+            <li>
+              <a href="#">Home</a>
+            </li>
+            <li>
+              <a href="#">Privacy Policy</a>
+            </li>
+            <li>
+              <a href="#">Contact us</a>
+            </li>
           </ul>
         </div>
       </div>
 
-      <ToastContainer />
     </div>
   );
 };

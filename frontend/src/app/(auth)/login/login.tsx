@@ -33,7 +33,7 @@ const UserLogin = () => {
       router.push(`/dashboard`)
       reset({})
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err?.message);
     }
   }
 
