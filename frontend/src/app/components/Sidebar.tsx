@@ -1,7 +1,7 @@
 "use client";
 
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { LogoutUser, removeProfile, UpdateUserProfile, viewProfile } from "@/store/slices/authSlice";
+import { LogoutUser, removeProfile, setAuthToken, setUser, UpdateUserProfile, viewProfile } from "@/store/slices/authSlice";
 import { chatSidebarThunk, clearUnread, markMessagesAsReadThunk, setSelectedUser } from "@/store/slices/messageSlice";
 import { removeCookie } from "@/utils/commons";
 import { signOut, useSession } from "next-auth/react";
@@ -15,13 +15,76 @@ const Sidebar = () => {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { users, unreadCounts, selectedUser } = useAppSelector((state) => state.messages);
-  const { profile } = useAppSelector((state) => state.auth);
+  const { profile,token } = useAppSelector((state) => state.auth);
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   useEffect(() => {
     dispatch(chatSidebarThunk());
     dispatch(viewProfile());
   }, [dispatch]);
+
+ useEffect(() => {
+    const tokenFromStorage = localStorage.getItem("token");
+    if (tokenFromStorage && !token) {
+      dispatch(setAuthToken(tokenFromStorage));
+      dispatch(viewProfile());
+      dispatch(chatSidebarThunk());
+    }
+  }, [dispatch, token]);
+
+useEffect(() => {
+  const handleSocialLogin = async () => {
+     const tokenFromStorage = localStorage.getItem("token");
+     console.log(tokenFromStorage,"tokenFromStorageeeee");
+     
+    if (!session) return;
+
+    // prevent running multiple times
+    // if (localStorage.getItem("socialLoginDone")) return;
+     const existingToken = localStorage.getItem("token");
+    if (existingToken) {
+      dispatch(setAuthToken(existingToken));
+      return;
+    }
+
+    try {
+      console.log(session,"session7777");
+      
+      const { email, name } = session.user as any;
+      const provider = (session.user as any).provider;
+      const providerId = (session.user as any).id || (session.user as any).sub;
+
+      const res = await fetch("http://localhost:5001/api/auth/social-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name, provider ,providerId}),
+      });
+
+      if (!res.ok) throw new Error("Social login failed");
+
+      const { token, user } = await res.json();
+      console.log(token,"tokennnnnn");
+      
+
+      // Store token & user in Redux
+      dispatch(setAuthToken(token));
+      dispatch(setUser(user));
+
+      // Store in localStorage if needed
+      localStorage.setItem("token", token);
+      localStorage.setItem("userId", user._id);
+      localStorage.setItem("socialLoginDone", "true");
+
+      // Now call APIs that require token
+      //  dispatch(viewProfile());
+      //  dispatch(chatSidebarThunk());
+    } catch (err) {
+      console.error("Social login error:", err);
+    }
+  };
+
+  handleSocialLogin();
+}, [session, dispatch]);
 
   const filteredUsers = useMemo(() => {
     if (!Array.isArray(users)) return [];

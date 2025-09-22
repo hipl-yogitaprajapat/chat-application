@@ -23,6 +23,20 @@
         },
       }),
     ],
+      callbacks: {
+    async session({ session, token, user }) {
+      // Add provider to session
+      session.user.provider = token.provider;
+      session.user.id = token.sub; // user id from provider
+      return session;
+    },
+    async jwt({ token, account }) {
+      if (account) {
+        token.provider = account.provider; // google or github
+      }
+      return token;
+    },
+  },
     secret: process.env.NEXTAUTH_SECRET,
   })
 

@@ -24,6 +24,8 @@ const userSchema = new mongoose.Schema(
           image:{
             type:String,
         },
+          provider: { type: String },
+          providerId: { type: String }, 
     },
     { timestamps: true },
 ) 

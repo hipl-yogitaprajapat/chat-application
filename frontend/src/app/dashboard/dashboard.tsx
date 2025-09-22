@@ -3,19 +3,19 @@ import { useEffect, useState, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { connectSocket, getSocket, disconnectSocket } from "../../lib/socket";
-import { addMessage, deleteMessageThunk, fetchChatHistoryThunk, markMessagesAsReadThunk, sendMessageThunk, setOnlineUsers, setUnreadCounts } from "@/store/slices/messageSlice";
+import { addMessage, deleteMessageThunk, fetchChatHistoryThunk, markMessageDeleted, markMessagesAsReadThunk, sendMessageThunk, setOnlineUsers, setUnreadCounts } from "@/store/slices/messageSlice";
 import { toast } from "react-toastify";
 
 const Dashboard = () => {
   const dispatch = useAppDispatch();
   const { selectedUser, messages, onlineUsers } = useAppSelector((state) => state.messages);
-  console.log(messages, "messagesssss");
+  // console.log(messages, "messagesssss");
 
   const [message, setMessage] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null | undefined>(null);
-  console.log(menuOpenId, "menuOpenId");
+  // console.log(menuOpenId, "menuOpenId");
 
   const typingTimeout = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -61,11 +61,24 @@ const Dashboard = () => {
       }
     });
 
+    
+  socket.on("messageDeleted", ({messageId, text }) => {
+    // setMessages((prev) =>
+    //   prev.map((msg) =>
+    //     msg._id === messageId ? { ...msg, text, deleted: true } : msg
+    //   )
+    // );
+//  const data = dispatch(deleteMessageThunk(messageId))
+//  console.log(data,"dataeeeeee");
+ dispatch(markMessageDeleted({messageId, text}))
+  });
+
     return () => {
       socket?.off("newMessage");
       socket?.off("unreadCountsUpdate");
       socket?.off("getOnlineUsers");
       socket?.off("userTyping");
+      socket?.off("messageDeleted");
       disconnectSocket();
     };
   }, [dispatch, selectedUser]);

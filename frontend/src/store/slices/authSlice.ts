@@ -120,6 +120,12 @@ const authSlice = createSlice({
       state.error = null;
       state.message = '';
     },
+     setAuthToken: (state, action: PayloadAction<string>) => {
+      state.token = action.payload;
+    },
+    setUser: (state, action: PayloadAction<any>) => {
+      state.user = action.payload;
+    },
     },
     extraReducers:(builder)=>{
         builder.addCase(registerUserThunk.pending,(state)=>{
@@ -212,7 +218,7 @@ const authSlice = createSlice({
             state.isLoading = false;
             state.success = true;
             state.profile = action.payload;
-            state.message = action.payload.message;
+            state.message = action.payload?.message;
         })
         builder.addCase(viewProfile.rejected, (state, action) => {
             state.isLoading = false
@@ -236,5 +242,5 @@ const authSlice = createSlice({
     }
 })
 
-export const {clearMessages}= authSlice.actions;
+export const {clearMessages,setAuthToken,setUser}= authSlice.actions;
 export default authSlice.reducer;

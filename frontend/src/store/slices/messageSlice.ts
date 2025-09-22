@@ -107,6 +107,12 @@ const chatSlice = createSlice({
   const userId = action.payload;
   state.unreadCounts[userId] = (state.unreadCounts[userId] || 0) + 1;
 },
+markMessageDeleted: (state, action) => {
+  const { messageId, text } = action.payload;
+  state.messages = state.messages.map((msg) =>
+    msg._id === messageId ? { ...msg, text, deleted: true } : msg
+  );
+},
   },
   extraReducers: (builder) => {
     builder.addCase(chatSidebarThunk.pending, (state) => {
@@ -185,5 +191,5 @@ const chatSlice = createSlice({
   }
 })
 
-export const { clearMessages, setSelectedUser, addMessage, setMessages, setOnlineUsers,setUnreadCounts,clearUnread } = chatSlice.actions;
+export const { clearMessages, setSelectedUser, addMessage, setMessages, setOnlineUsers,setUnreadCounts,clearUnread,markMessageDeleted } = chatSlice.actions;
 export default chatSlice.reducer;

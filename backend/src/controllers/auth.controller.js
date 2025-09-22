@@ -216,3 +216,50 @@ export const removeProfile = async (req, res) => {
     return res.status(500).json({ message: "Internal server error", success: false });
   }
 };
+
+
+export const socialLogin = async (req, res) => {
+  try {
+    const { email, name, provider } = req.body;
+
+    if (!email || !provider ) {
+      return res.status(400).json({
+        message: "Email, provider, and providerId are required",
+        success: false,
+      });
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = await User.create({
+        email,
+        firstName: name?.split(" ")[0] || "",
+        lastName: name?.split(" ")[1] || "",
+        provider,
+        providerId,
+      });
+    }
+
+    const token = generateToken(user._id, res);
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+      user: {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        provider: user.provider,
+      },
+    });
+  } catch (err) {
+    console.error("Error in socialLogin controller:", err.message);
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
