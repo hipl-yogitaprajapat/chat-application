@@ -3,13 +3,13 @@ import { useEffect, useState, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { connectSocket, getSocket, disconnectSocket } from "../../lib/socket";
-import { addMessage, deleteMessageThunk, fetchChatHistoryThunk, markMessageDeleted, markMessagesAsReadThunk, sendMessageThunk, setOnlineUsers, setUnreadCounts } from "@/store/slices/messageSlice";
+import { addMessage, deleteMessageThunk, fetchChatHistoryThunk, markMessageDeleted, markMessagesAsReadThunk, moveUserToTop, sendMessageThunk, setOnlineUsers, setUnreadCounts } from "@/store/slices/messageSlice";
 import { toast } from "react-toastify";
 
 const Dashboard = () => {
   const dispatch = useAppDispatch();
   const { selectedUser, messages, onlineUsers } = useAppSelector((state) => state.messages);
-  // console.log(messages, "messagesssss");
+  console.log(messages, "messagesssss");
 
   const [message, setMessage] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
@@ -34,7 +34,19 @@ const Dashboard = () => {
     });
 
     socket.on("newMessage", (msg) => {
-      dispatch(addMessage(msg));
+      console.log(msg, "msg123456");
+
+      // dispatch(addMessage(msg));
+      const currentUserId = localStorage.getItem("userId")?.replace(/"/g, "");
+
+      const senderId = msg.sender_id || msg.senderId;
+      const receiverId = msg.receiver_id || msg.receiverId;
+
+      if (selectedUser && (senderId === selectedUser._id || receiverId === selectedUser._id)) {
+        dispatch(addMessage(msg));
+      }
+      dispatch(moveUserToTop(senderId === currentUserId ? receiverId : senderId));
+      // dispatch(moveUserToTop(msg.sender_id));
       if (!selectedUser || msg.senderId !== selectedUser._id) {
         dispatch({
           type: "messages/incrementUnread",
@@ -61,17 +73,17 @@ const Dashboard = () => {
       }
     });
 
-    
-  socket.on("messageDeleted", ({messageId, text }) => {
-    // setMessages((prev) =>
-    //   prev.map((msg) =>
-    //     msg._id === messageId ? { ...msg, text, deleted: true } : msg
-    //   )
-    // );
-//  const data = dispatch(deleteMessageThunk(messageId))
-//  console.log(data,"dataeeeeee");
- dispatch(markMessageDeleted({messageId, text}))
-  });
+
+    socket.on("messageDeleted", ({ messageId, text }) => {
+      // setMessages((prev) =>
+      //   prev.map((msg) =>
+      //     msg._id === messageId ? { ...msg, text, deleted: true } : msg
+      //   )
+      // );
+      //  const data = dispatch(deleteMessageThunk(messageId))
+      //  console.log(data,"dataeeeeee");
+      dispatch(markMessageDeleted({ messageId, text }))
+    });
 
     return () => {
       socket?.off("newMessage");
@@ -97,16 +109,30 @@ const Dashboard = () => {
     formData.append("text", message);
     if (attachment) formData.append("attachment", attachment);
 
+    // Create temporary message with proper format
+    const dateObj = new Date();
+    const createdDate = `${String(dateObj.getDate()).padStart(2, '0')}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${dateObj.getFullYear()}`;
+
+    const dayDiff = 0; // for "Today" label since it's now
+    const dateLabel = "Today";
 
     const newMsg = {
-      text: message,
+      id: Date.now().toString(), // temporary unique id for UI
+      sender_id: localStorage.getItem("userId"),
+      receiver_id: selectedUser._id,
+      content: message,
       attachment: attachment ? URL.createObjectURL(attachment) : null,
-      senderId: localStorage.getItem("userId"),
-      receiverId: selectedUser._id,
-      createdAt: new Date().toISOString(),
+      created_date: createdDate,
+      created_time: dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }),
+      date_time_label: dateLabel,
+      is_read: true, // mark as read for sender
     };
+    console.log(newMsg, "newMsg999999");
 
+    // Add to redux immediately
     dispatch(addMessage(newMsg));
+
+    // Send to backend
     dispatch(sendMessageThunk({ receiverId: selectedUser._id, formData }));
 
     setMessage("");
@@ -154,13 +180,16 @@ const Dashboard = () => {
   const handleDelete = async (messageId: string) => {
     try {
       const result = await dispatch(deleteMessageThunk(messageId)).unwrap();
-      console.log(result, "result");
-
+      if (selectedUser) {
+        dispatch(fetchChatHistoryThunk(selectedUser._id));
+      }
+      setMenuOpenId(null)
       // toast.success(result.message)
     } catch (err: any) {
       toast.error(err?.message);
     }
   }
+
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -201,86 +230,65 @@ const Dashboard = () => {
 
             {/* Messages */}
             <div className="flex-1 p-4 space-y-4 overflow-y-auto">
-
-              {messages
-                .filter((msg) =>
-                  (msg.senderId === selectedUser._id &&
-                    msg.receiverId === localStorage.getItem("userId")) ||
-                  (msg.receiverId === selectedUser._id &&
-                    msg.senderId === localStorage.getItem("userId"))
-                )
-                .map((msg, i) => {
-                  const time = msg.createdAt
-                    ? new Date(msg.createdAt).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                    : "";
-
-                  const isMyMessage = msg.senderId === localStorage.getItem("userId");
-
-                  return (
-                    <div
-                      key={i}
-                      className={`flex ${isMyMessage ? "justify-end" : "justify-start"}`}
-                    >
-                      <div className="relative group bg-blue-100 p-3 rounded-lg max-w-sm">
-                        <p>{msg.text}</p>
-                        {msg.attachment && (
-                          <a
-                            href={msg.attachment}
-                            target="_blank"
-                            className="text-blue-600 underline block mt-1"
-                          >
-                            Attachment
-                          </a>
-                        )}
-                        <span className="text-xs text-gray-500 block mt-1 text-right">
-                          {time}
-                        </span>
-
-                        {/* 3 Dots Button (only show for my own messages) */}
-                        {isMyMessage && (
-                          <button
-                            onClick={() =>
-                              setMenuOpenId(menuOpenId === msg.createdAt ? null : msg.createdAt)
-                            }
-                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition cursor-pointer"
-                          >
-                            ⋮
-                          </button>
-                        )}
-
-                        {/* Dropdown Menu */}
-                        {menuOpenId === msg.createdAt && (
-                          <div className="absolute right-0 top-8 bg-white border shadow-md rounded-md w-28 z-50">
-                            <button
-                              className="block w-full text-left px-3 py-2 hover:bg-gray-100"
-                            // onClick={() => {
-                            //   console.log("Edit", msg);
-                            //   setMenuOpenId(null);
-                            // }}
-                            // onClick={() => handleEdit(msg)}
-                            >
-                              ✏️ Edit
-                            </button>
-                            <button
-                              className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-red-500"
-                              // onClick={() => {
-                              //   console.log("Delete", msg);
-                              //   setMenuOpenId(null);
-                              // }}
-                              onClick={() => handleDelete(msg?._id)}
-                            >
-                              🗑 Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
+              {Object.entries(messages?.messages || {}).map(([dateLabel, msgs]) => {
+                // msgs is already an array for each date
+                return (
+                  <div key={dateLabel}>
+                    <div className="text-center my-2 text-gray-500 text-sm font-medium">
+                      {dateLabel}
                     </div>
-                  );
-                })}
 
+                    {/* Messages for this date */}
+                    {msgs.map((msg: any) => {
+                      const currentUserId = localStorage.getItem("userId")?.replace(/"/g, "");
+                      const isMyMessage = msg.sender_id === currentUserId;
+
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`flex ${isMyMessage ? "justify-end" : "justify-start"} mb-2`}
+                        >
+                          <div className="relative group bg-blue-100 p-3 rounded-lg max-w-sm">
+                            {/* Message text */}
+                            <p>{msg.content}</p>
+
+                            {/* Time */}
+                            <span className="text-xs text-gray-500 block mt-1 text-right">
+                              {msg.created_time}
+                            </span>
+
+                            {/* Actions only for my messages */}
+                            {isMyMessage && (
+                              <button
+                                onClick={() =>
+                                  setMenuOpenId(menuOpenId === msg.id ? null : msg.id)
+                                }
+                                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                              >
+                                ⋮
+                              </button>
+                            )}
+
+                            {menuOpenId === msg.id && (
+                              <div className="absolute right-0 top-8 bg-white border shadow-md rounded-md w-28 z-50">
+                                <button className="block w-full text-left px-3 py-2 hover:bg-gray-100">
+                                  ✏️ Edit
+                                </button>
+                                <button
+                                  className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-red-500 cursor-pointer"
+                                  onClick={() => handleDelete(msg.id)}
+                                >
+                                  🗑 Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
               <div ref={messagesEndRef} />
             </div>
 

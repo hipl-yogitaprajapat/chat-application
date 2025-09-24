@@ -10,7 +10,7 @@ export async function chatSidebar(): Promise<any> {
             },
             withCredentials: true
         })
-        return response.data
+        return response.data      
 
     } catch (error: any) {
         if (error.response && error.response.data) {

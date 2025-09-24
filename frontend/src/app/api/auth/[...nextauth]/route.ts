@@ -24,10 +24,10 @@
       }),
     ],
       callbacks: {
-    async session({ session, token, user }) {
+    async session({ session, token }) {
       // Add provider to session
       session.user.provider = token.provider;
-      session.user.id = token.sub; // user id from provider
+      session.user.id = token.sub;
       return session;
     },
     async jwt({ token, account }) {

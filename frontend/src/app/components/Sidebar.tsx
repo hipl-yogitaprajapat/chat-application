@@ -34,9 +34,6 @@ const Sidebar = () => {
 
 useEffect(() => {
   const handleSocialLogin = async () => {
-     const tokenFromStorage = localStorage.getItem("token");
-     console.log(tokenFromStorage,"tokenFromStorageeeee");
-     
     if (!session) return;
 
     // prevent running multiple times
@@ -48,8 +45,6 @@ useEffect(() => {
     }
 
     try {
-      console.log(session,"session7777");
-      
       const { email, name } = session.user as any;
       const provider = (session.user as any).provider;
       const providerId = (session.user as any).id || (session.user as any).sub;
@@ -75,9 +70,6 @@ useEffect(() => {
       localStorage.setItem("userId", user._id);
       localStorage.setItem("socialLoginDone", "true");
 
-      // Now call APIs that require token
-      //  dispatch(viewProfile());
-      //  dispatch(chatSidebarThunk());
     } catch (err) {
       console.error("Social login error:", err);
     }
@@ -110,6 +102,13 @@ useEffect(() => {
     }
   };
 
+  const sessionLogout = ()=>{
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("socialLoginDone");
+    signOut()
+  }
+
   const handleUserClick = (user: any) => {
     dispatch(setSelectedUser(user));
     dispatch(markMessagesAsReadThunk(user._id));
@@ -133,7 +132,7 @@ useEffect(() => {
 
         <div>
           <h2 className="font-semibold">{session?.user?.name || `${profile?.firstName || ""} ${profile?.lastName || ""}`}</h2>
-          {!session?.user && profile?.company && (<p className="text-sm text-gray-500">{profile?.company}</p>)}
+           {(<p className="text-sm text-gray-500">{profile?.company}</p>)}
         </div>
       </div>
 
@@ -159,11 +158,15 @@ useEffect(() => {
               className="p-3 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
               onClick={() => handleUserClick(user)}
             >
-              <img
-                src={`https://ui-avatars.com/api/?name=${user.firstName}+${user.lastName}`}
-                alt={`${user.firstName} ${user.lastName}`}
-                className="w-10 h-10 rounded-full"
-              />
+               <img
+            src={
+              user?.image
+                ? `http://localhost:5001/uploads/${user.image}`
+                : "https://randomuser.me/api/portraits/men/1.jpg"
+            }
+            alt="profile"
+            className="w-10 h-10 rounded-full"
+          />
               <div className="flex-1">
                 <h3 className="font-semibold">
                   {user.firstName} {user.lastName}
@@ -188,7 +191,7 @@ useEffect(() => {
       </Link>
       {session ? (
         <button
-          onClick={() => signOut()}
+          onClick={sessionLogout}
           className="p-2 bg-red-500 text-white rounded"
         >
           Logout
