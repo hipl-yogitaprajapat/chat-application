@@ -39,7 +39,6 @@ const UserRegister = () => {
     }
   }
 
-  const googleClientId: string = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID as string;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
@@ -166,15 +165,6 @@ const UserRegister = () => {
             Login
           </Link>
         </p>
-        {/* <div className="row">
-              <div className="col-4">
-                <div className="d-grid">
-                    <GoogleOAuthProvider clientId={googleClientId}>
-                    <GoogleComponent/>
-                    </GoogleOAuthProvider> 
-                </div>
-              </div>
-            </div> */}
 
         <button
           onClick={() => signIn("google")}

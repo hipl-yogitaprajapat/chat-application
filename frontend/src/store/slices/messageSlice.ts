@@ -84,7 +84,18 @@ const chatSlice = createSlice({
       state.selectedUser = action.payload;
     },
     addMessage: (state, action) => {
-      state.messages.push(action.payload);
+     const msg = action.payload;
+     const dateLabel = msg.date_time_label || "Today";
+
+     if (!state.messages.messages) {
+       state.messages.messages = {};
+     }
+
+     if (!state.messages.messages[dateLabel]) {
+       state.messages.messages[dateLabel] = [];
+    }
+
+    state.messages.messages[dateLabel]?.push(msg);
     },
     setMessages: (state, action) => {
       state.messages = action.payload;
@@ -113,6 +124,22 @@ markMessageDeleted: (state, action) => {
     msg._id === messageId ? { ...msg, text, deleted: true } : msg
   );
 },
+  moveUserToTop: (state, action) => {
+    console.log(action,"action111");
+    
+    const userId = action.payload;
+    console.log(userId,"userId");
+    
+    const index = state.users.findIndex((u: { _id: any }) => u._id === userId);
+    console.log(index,"index");
+    console.log("Looking for:", userId, "in", state.users.map(u => u._id));
+
+    if (index > -1) {
+      const [user] = state.users.splice(index, 1);
+      
+      state.users.unshift(user);
+    }
+  },
   },
   extraReducers: (builder) => {
     builder.addCase(chatSidebarThunk.pending, (state) => {
@@ -191,5 +218,5 @@ markMessageDeleted: (state, action) => {
   }
 })
 
-export const { clearMessages, setSelectedUser, addMessage, setMessages, setOnlineUsers,setUnreadCounts,clearUnread,markMessageDeleted } = chatSlice.actions;
+export const { clearMessages, setSelectedUser, addMessage, setMessages, setOnlineUsers,setUnreadCounts,clearUnread,markMessageDeleted,moveUserToTop } = chatSlice.actions;
 export default chatSlice.reducer;

@@ -37,13 +37,13 @@ const UserLogin = () => {
     }
   }
 
-  const githubClientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
-  const redirectUri = "http://localhost:5001/api/auth/callback/github";
+  // const githubClientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
+  // const redirectUri = "http://localhost:5001/api/auth/callback/github";
 
-  const handleGithubLogin = () => {
-    window.location.href = `https://github.com/login/oauth/authorize?client_id=${githubClientId}&scope=user:email`;
-  };
-  const googleClientId: string = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID as string;
+  // const handleGithubLogin = () => {
+  //   window.location.href = `https://github.com/login/oauth/authorize?client_id=${githubClientId}&scope=user:email`;
+  // };
+  // const googleClientId: string = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID as string;
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
       <div className="w-full max-w-sm bg-white shadow-xl rounded-2xl p-8">
